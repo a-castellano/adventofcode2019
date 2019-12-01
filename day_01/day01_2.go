@@ -10,9 +10,14 @@ import (
 )
 
 func calculateFuel(mass int) int {
-	var module int
-	module = mass/3 - 2
-	return module
+	var fuel int
+	fuel = mass/3 - 2
+	if fuel <= 0 {
+		fuel = 0
+	} else {
+		fuel += (calculateFuel(fuel))
+	}
+	return fuel
 }
 
 func processFile(filename string) int {
