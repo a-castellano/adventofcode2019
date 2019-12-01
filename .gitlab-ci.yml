@@ -1,0 +1,8 @@
+stages:
+    - test
+
+test:
+    stage: test
+    image: daedalusproject/base_deb_golang_1_13_builder:201912011512
+    script:
+        - make
