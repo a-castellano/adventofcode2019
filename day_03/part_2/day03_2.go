@@ -1,0 +1,212 @@
+// Álvaro Castellano Vela 2019/12/03
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+type Point struct {
+	X int
+	Y int
+}
+
+type StepsToPoint struct {
+	point Point
+	steps int
+}
+
+type WireDirection struct {
+	turn  rune
+	steps int
+}
+
+func Abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func processFile(filename string) [][]WireDirection {
+	file, err := os.Open(filename)
+	defer file.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var directions [][]WireDirection
+
+	directionRe := regexp.MustCompile("(R|U|L|D|)([[:digit:]]+)")
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		wireDirectionsText := strings.Split(scanner.Text(), ",")
+		var wireDirections []WireDirection
+		for _, direction := range wireDirectionsText {
+			match := directionRe.FindAllStringSubmatch(direction, -1)
+			turn := []rune(match[0][1])[0]
+			steps, _ := strconv.Atoi(match[0][2])
+			wireDirection := WireDirection{turn, steps}
+			wireDirections = append(wireDirections, wireDirection)
+		}
+		directions = append(directions, wireDirections)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return directions
+}
+
+func addStepsToIntersection(stepsToPoints *[]StepsToPoint, position Point, steps int) {
+	var found bool = false
+	for pos, stepToPoint := range *stepsToPoints {
+		if stepToPoint.point.X == position.X && stepToPoint.point.Y == position.Y {
+			(*stepsToPoints)[pos].steps += steps
+			found = true
+			break
+		}
+	}
+	if found == false {
+		newPoint := StepsToPoint{position, steps}
+		(*stepsToPoints) = append((*stepsToPoints), newPoint)
+	}
+}
+
+func getLoweLeftPoint(wiresDirections [][]WireDirection) int {
+
+	matrix := [40000][40000]uint8{}
+	stepsToPoint := []StepsToPoint{}
+
+	for i := 0; i < 40000; i++ {
+		for j := 0; j < 40000; j++ {
+			matrix[i][j] = 0
+		}
+	}
+
+	var wireID uint8 = 1
+	for _, wiredirection := range wiresDirections {
+		position := Point{20000, 20000}
+		for _, direction := range wiredirection {
+			switch direction.turn {
+			case 'U':
+				for i := 0; i < direction.steps; i++ {
+					position.X--
+					if matrix[position.X][position.Y] == 0 {
+						matrix[position.X][position.Y] = wireID
+					} else {
+						if matrix[position.X][position.Y] != wireID {
+							matrix[position.X][position.Y] = 99
+						}
+					}
+				}
+			case 'D':
+				for i := 0; i < direction.steps; i++ {
+					position.X++
+					if matrix[position.X][position.Y] == 0 {
+						matrix[position.X][position.Y] = wireID
+					} else {
+						if matrix[position.X][position.Y] != wireID {
+							matrix[position.X][position.Y] = 99
+						}
+					}
+
+				}
+			case 'L':
+				for i := 0; i < direction.steps; i++ {
+					position.Y--
+					if matrix[position.X][position.Y] == 0 {
+						matrix[position.X][position.Y] = wireID
+					} else {
+						if matrix[position.X][position.Y] != wireID {
+							matrix[position.X][position.Y] = 99
+						}
+					}
+
+				}
+			case 'R':
+				for i := 0; i < direction.steps; i++ {
+					position.Y++
+					if matrix[position.X][position.Y] == 0 {
+						matrix[position.X][position.Y] = wireID
+					} else {
+						if matrix[position.X][position.Y] != wireID {
+							matrix[position.X][position.Y] = 99
+						}
+					}
+
+				}
+			}
+		}
+		wireID += 1
+	}
+
+	for _, wiredirection := range wiresDirections {
+		position := Point{20000, 20000}
+		var steps int = 0
+		for _, direction := range wiredirection {
+			switch direction.turn {
+			case 'U':
+				for i := 0; i < direction.steps; i++ {
+					position.X--
+					steps++
+					if matrix[position.X][position.Y] == 99 {
+						addStepsToIntersection(&stepsToPoint, position, steps)
+					}
+				}
+			case 'D':
+				for i := 0; i < direction.steps; i++ {
+					position.X++
+					steps++
+					if matrix[position.X][position.Y] == 99 {
+						addStepsToIntersection(&stepsToPoint, position, steps)
+					}
+				}
+			case 'L':
+				for i := 0; i < direction.steps; i++ {
+					position.Y--
+					steps++
+					if matrix[position.X][position.Y] == 99 {
+						addStepsToIntersection(&stepsToPoint, position, steps)
+					}
+				}
+			case 'R':
+				for i := 0; i < direction.steps; i++ {
+					position.Y++
+					steps++
+					if matrix[position.X][position.Y] == 99 {
+						addStepsToIntersection(&stepsToPoint, position, steps)
+					}
+				}
+			}
+		}
+	}
+
+	minimumDistance := 90000000
+	for _, stepToPoint := range stepsToPoint {
+
+		if minimumDistance > stepToPoint.steps {
+			minimumDistance = stepToPoint.steps
+		}
+	}
+	return minimumDistance
+}
+
+func main() {
+	args := os.Args[1:]
+	if len(args) != 1 {
+		log.Fatal("You must supply a file to process.")
+	}
+	filename := args[0]
+	directions := processFile(filename)
+	lowerLeftPoint := getLoweLeftPoint(directions)
+	fmt.Printf("Lower-left Point distance: %d\n", lowerLeftPoint)
+}
