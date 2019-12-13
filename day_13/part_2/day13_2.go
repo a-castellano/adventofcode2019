@@ -10,18 +10,14 @@ import (
 	"strings"
 )
 
-func findObject(puzzleInput []int, objectType int) (int, int) {
-
-	var posX int = -1
-	var posY int = -1
+func findObject(puzzleInput []int, objectType int) int {
 
 	for i := 0; i < len(puzzleInput); i += 3 {
 		if puzzleInput[i+2] == objectType {
-			posX = puzzleInput[i]
-			posY = puzzleInput[i+1]
+			return puzzleInput[i]
 		}
 	}
-	return posX, posY
+	return -1
 }
 
 func findScore(puzzleInput []int) int {
@@ -62,8 +58,8 @@ func runIntCode(intCode []int) int {
 
 	var input int
 
-	ballPositionX, ballPositionY := -1, -1
-	paddlePositionX, paddlePositionY := -1, -1
+	var ball int = -1
+	var paddle int = -1
 
 	for stop != true {
 		parameter1, parameter2 = 0, 0
@@ -103,29 +99,18 @@ func runIntCode(intCode []int) int {
 			position += 4
 		case 3, 4:
 			if opcode == 3 {
-				fmt.Println("___________________INPUT________________")
-				fmt.Println(codeOutput)
-				//ballPositionX, ballPositionY = findObject(codeOutput, 4, ballPositionX, ballPositionY)
-				ballPositionX, ballPositionY = findObject(codeOutput, 4)
-				fmt.Println("Ball: ", ballPositionX, ballPositionY)
-				//paddlePositionX, paddlePositionY = findObject(codeOutput, 3, paddlePositionX, paddlePositionY)
-				paddlePositionX, paddlePositionY = findObject(codeOutput, 3)
-				fmt.Println("Paddle: ", paddlePositionX, paddlePositionY)
-				fmt.Println("Score: ", findScore(codeOutput))
+				ball = findObject(codeOutput, 4)
+				paddle = findObject(codeOutput, 3)
 				codeOutput = make([]int, 0)
-				//fmt.Println(codeOutput)
-				fmt.Println("__________________________________")
-				if ballPositionX > paddlePositionX {
+				if ball > paddle {
 					input = 1
 				}
-				if ballPositionX < paddlePositionX {
+				if ball < paddle {
 					input = -1
 				}
-				if ballPositionX == paddlePositionX {
+				if ball == paddle {
 					input = 0
 				}
-				//paddlePositionX += input
-				fmt.Println("Paddle: ", paddlePositionX, paddlePositionY)
 
 				switch mode1 {
 
