@@ -10,6 +10,32 @@ import (
 	"strings"
 )
 
+func findObject(puzzleInput []int, objectType int) (int, int) {
+
+	var posX int = -1
+	var posY int = -1
+
+	for i := 0; i < len(puzzleInput); i += 3 {
+		if puzzleInput[i+2] == objectType {
+			posX = puzzleInput[i]
+			posY = puzzleInput[i+1]
+		}
+	}
+	return posX, posY
+}
+
+func findScore(puzzleInput []int) int {
+
+	var score int = -1
+
+	for i := 0; i < len(puzzleInput); i += 3 {
+		if puzzleInput[i] == -1 && puzzleInput[i+1] == 0 {
+			score = puzzleInput[i+2]
+		}
+	}
+	return score
+}
+
 func decodeInstruction(instruction int) (int, int, int, int) {
 	var opcode int = instruction % 100
 	var modes int = instruction / 100
@@ -22,7 +48,7 @@ func decodeInstruction(instruction int) (int, int, int, int) {
 	return opcode, mode1, mode2, mode3
 }
 
-func runIntCode(intCode []int, input int) []int {
+func runIntCode(intCode []int) int {
 	var stop bool = false
 
 	var position int = 0
@@ -33,6 +59,11 @@ func runIntCode(intCode []int, input int) []int {
 	var codeOutput []int
 
 	var parameter1, parameter2 int = 0, 0
+
+	var input int
+
+	ballPositionX, ballPositionY := -1, -1
+	paddlePositionX, paddlePositionY := -1, -1
 
 	for stop != true {
 		parameter1, parameter2 = 0, 0
@@ -72,7 +103,32 @@ func runIntCode(intCode []int, input int) []int {
 			position += 4
 		case 3, 4:
 			if opcode == 3 {
+				fmt.Println("___________________INPUT________________")
+				fmt.Println(codeOutput)
+				//ballPositionX, ballPositionY = findObject(codeOutput, 4, ballPositionX, ballPositionY)
+				ballPositionX, ballPositionY = findObject(codeOutput, 4)
+				fmt.Println("Ball: ", ballPositionX, ballPositionY)
+				//paddlePositionX, paddlePositionY = findObject(codeOutput, 3, paddlePositionX, paddlePositionY)
+				paddlePositionX, paddlePositionY = findObject(codeOutput, 3)
+				fmt.Println("Paddle: ", paddlePositionX, paddlePositionY)
+				fmt.Println("Score: ", findScore(codeOutput))
+				codeOutput = make([]int, 0)
+				//fmt.Println(codeOutput)
+				fmt.Println("__________________________________")
+				if ballPositionX > paddlePositionX {
+					input = 1
+				}
+				if ballPositionX < paddlePositionX {
+					input = -1
+				}
+				if ballPositionX == paddlePositionX {
+					input = 0
+				}
+				//paddlePositionX += input
+				fmt.Println("Paddle: ", paddlePositionX, paddlePositionY)
+
 				switch mode1 {
+
 				case 0:
 					intCode[intCode[position+1]] = input
 				case 1:
@@ -217,10 +273,11 @@ func runIntCode(intCode []int, input int) []int {
 			log.Fatal("Unknown opcode ", opcode)
 		}
 	}
-	return codeOutput
+
+	return findScore(codeOutput)
 }
 
-func processFile(filename string, input int) []int {
+func processFile(filename string) []int {
 	file, err := os.Open(filename)
 	defer file.Close()
 	if err != nil {
@@ -248,20 +305,7 @@ func processFile(filename string, input int) []int {
 	for i := 0; i < 6000; i++ {
 		intCode = append(intCode, 0)
 	}
-
-	return runIntCode(intCode, input)
-}
-
-func countBlocks(puzzleInput []int) int {
-	var blocks int = 0
-
-	for i := 0; i < len(puzzleInput); i += 3 {
-		if puzzleInput[i+2] == 2 {
-
-			blocks++
-		}
-	}
-	return blocks
+	return intCode
 }
 
 func main() {
@@ -270,7 +314,9 @@ func main() {
 		log.Fatal("You must supply a file to process.")
 	}
 	filename := args[0]
-	puzzleInput := processFile(filename, 0)
-	blocks := countBlocks(puzzleInput)
-	fmt.Println("Blocks: ", blocks)
+	intCode := processFile(filename)
+	//Memory address 0 represents the number of quarters that have been inserted; set it to 2 to play for free.
+	intCode[0] = 2
+	score := runIntCode(intCode)
+	fmt.Println("Score: ", score)
 }
