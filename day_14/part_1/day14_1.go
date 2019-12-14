@@ -207,6 +207,7 @@ func generateChemical(chemicals map[string]*Chemical, requiredChemicalName strin
 				//			fmt.Println("PERMUTATION NUMBER ", premutationIndex)
 				//fmt.Println(path)
 				//			fmt.Println("to generate ", outputChemical.name)
+				bestPath := 999999999999
 				for _, index := range path {
 					// Check if we have enough of this chemical
 					requiredChemical := outputChemical.requiredChemicals[index]
@@ -216,7 +217,9 @@ func generateChemical(chemicals map[string]*Chemical, requiredChemicalName strin
 						currentState.boxOfChemicals[requiredChemical.chemical.name] -= requiredChemical.quantity
 					} else {
 						//					fmt.Println("NEED ", requiredChemical.quantity, " of ", requiredChemical.chemical.name, " but we have ", currentState.boxOfChemicals[requiredChemical.chemical.name])
-						for currentState.boxOfChemicals[requiredChemical.chemical.name] < requiredChemical.quantity {
+
+						for currentState.boxOfChemicals[requiredChemical.chemical.name] < requiredChemical.quantity && currentState.generatedChemicals["ORE"] < bestPath {
+							//fmt.Println("currentState.generatedChemicals[ORE]: ", currentState.generatedChemicals["ORE"])
 							var chemicalRequiredQuantity int = requiredChemical.quantity - currentState.boxOfChemicals[requiredChemical.chemical.name]
 							//						fmt.Println("We need more ", requiredChemical.chemical.name, " chemical")
 							//						fmt.Println("We need", chemicalRequiredQuantity)
@@ -236,6 +239,10 @@ func generateChemical(chemicals map[string]*Chemical, requiredChemicalName strin
 						log.Fatal("BOOOM")
 					}
 
+				}
+				if bestPath > currentState.generatedChemicals["ORE"] {
+					bestPath = currentState.generatedChemicals["ORE"]
+					//fmt.Println("bestPath: ", bestPath)
 				}
 
 				//			fmt.Println("_____________", posibleStates)
