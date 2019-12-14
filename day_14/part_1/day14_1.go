@@ -99,9 +99,9 @@ func processFile(filename string) map[string]*Chemical {
 		matchLength := len(match)
 		outputChemicalString := match[matchLength-1][0]
 		inputChemicalsString := match[:matchLength-1]
-		fmt.Println("line: ", match)
-		fmt.Println("output: ", outputChemicalString)
-		fmt.Println("input: ", inputChemicalsString)
+		//fmt.Println("line: ", match)
+		//fmt.Println("output: ", outputChemicalString)
+		//fmt.Println("input: ", inputChemicalsString)
 		quantityGenerated, outpuChemicalName := getChemicalInfo(outputChemicalString)
 		if _, ok := chemicals[outpuChemicalName]; !ok {
 			outputChemical := Chemical{outpuChemicalName, quantityGenerated, make([]RequiredChemical, 0)}
@@ -109,66 +109,73 @@ func processFile(filename string) map[string]*Chemical {
 		} else {
 			chemicals[outpuChemicalName].quantityGenerated = quantityGenerated
 		}
-		fmt.Println(quantityGenerated, outpuChemicalName)
+		//fmt.Println(quantityGenerated, outpuChemicalName)
 		for _, inputString := range inputChemicalsString {
-			fmt.Println("Requires: ", inputString[0])
+			//fmt.Println("Requires: ", inputString[0])
 			quantityRequired, inputChemicalName := getChemicalInfo(inputString[0])
-			fmt.Println("Requires: ", quantityRequired, inputChemicalName)
+			//fmt.Println("Requires: ", quantityRequired, inputChemicalName)
 			if _, ok := chemicals[inputChemicalName]; !ok {
-				fmt.Println(inputChemicalName, " not registered yet")
+				//fmt.Println(inputChemicalName, " not registered yet")
 				inputChemical := Chemical{inputChemicalName, -1, make([]RequiredChemical, 0)}
-				fmt.Println(inputChemical)
+				//fmt.Println(inputChemical)
 				chemicals[inputChemicalName] = &inputChemical
 			}
 			requiredChemical := RequiredChemical{chemicals[inputChemicalName], quantityRequired}
 			chemicals[outpuChemicalName].requiredChemicals = append(chemicals[outpuChemicalName].requiredChemicals, requiredChemical)
 		}
-		fmt.Println("_________")
+		//fmt.Println("_________")
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(chemicals)
+	//fmt.Println(chemicals)
 
-	for key, _ := range chemicals {
-		fmt.Println("Output: ", key)
-		fmt.Println("Requires:")
-		for _, required := range chemicals[key].requiredChemicals {
-			fmt.Println(required.quantity, required.chemical.name)
-		}
-		fmt.Println("To generate ", chemicals[key].quantityGenerated)
-		fmt.Println("")
-	}
+	//for key, _ := range chemicals {
+	//	fmt.Println("Output: ", key)
+	//	fmt.Println("Requires:")
+	//	for _, required := range chemicals[key].requiredChemicals {
+	//fmt.Println(required.quantity, required.chemical.name)
+	//	}
+	//	fmt.Println("To generate ", chemicals[key].quantityGenerated)
+	//	fmt.Println("")
+	//
 	return chemicals
 }
 
 func generateChemical(chemicals map[string]*Chemical, requiredChemicalName string, requiredQuantity int, state State) State {
 
 	outputChemical := chemicals[requiredChemicalName]
-	for _, requiredChemicals := range outputChemical.requiredChemicals {
-		fmt.Println("Generate ", requiredQuantity, " ", requiredChemicalName, "requires", requiredChemicals.quantity, " of ", requiredChemicals.chemical.name)
-	}
 	//Check if this chemicals only needs ORE to be generated
 	var requiredChemicalsLenght int = len(outputChemical.requiredChemicals)
 	if requiredChemicalsLenght == 1 && outputChemical.requiredChemicals[0].chemical.name == "ORE" {
 		var requiredChemicals int = outputChemical.requiredChemicals[0].quantity
-		fmt.Println("ORE FOUND")
-		fmt.Println(requiredChemicalName, " requires ", requiredChemicals, "of ORE")
+		//	fmt.Println("ORE FOUND")
+		//	fmt.Println(requiredChemicalName, " requires ", requiredChemicals, "of ORE")
+		//	fmt.Println("This reaction will prodece ", outputChemical.quantityGenerated, "of ", requiredChemicalName)
+		//	fmt.Println("Current ", requiredChemicalName, " -> ", state.boxOfChemicals[outputChemical.name])
+		times := 0
 		if state.boxOfChemicals["ORE"] < requiredChemicals {
 			// More ORE is needed
-			fmt.Println("Not enough ORE, generating more.")
+			//		fmt.Println("Not enough ORE, generating more.")
 			//generate more
-			for state.boxOfChemicals["ORE"] < requiredChemicals {
+			generated := 0
+			//		fmt.Println(state.boxOfChemicals[outputChemical.name], requiredQuantity)
+			for generated < requiredQuantity {
+				//			fmt.Println("dsddsfdsdfs")
 				state.generatedChemicals["ORE"] += requiredChemicals
 				state.boxOfChemicals["ORE"] += requiredChemicals
 				state.generatedChemicals[outputChemical.name] += outputChemical.quantityGenerated
+				generated += outputChemical.quantityGenerated
 				state.boxOfChemicals[outputChemical.name] += outputChemical.quantityGenerated
+				//			fmt.Println("Current ", requiredChemicalName, " -> ", state.boxOfChemicals[outputChemical.name])
+				times++
 			}
 		}
-		state.boxOfChemicals["ORE"] -= requiredChemicals
+		//	fmt.Println("Current ", requiredChemicalName, " -> ", state.boxOfChemicals[outputChemical.name])
+		state.boxOfChemicals["ORE"] -= requiredChemicals * times
 	} else {
-		fmt.Println("NO NEED ORE DIRECTLY")
+		//	fmt.Println("NO NEED ORE DIRECTLY")
 		// check if we need to generate more chemicals
 		var generateMoreChemicals bool = false
 		for _, requiredChemicals := range outputChemical.requiredChemicals {
@@ -183,67 +190,79 @@ func generateChemical(chemicals map[string]*Chemical, requiredChemicalName strin
 				var requiredChemicals int = requiredChemical.quantity
 				state.boxOfChemicals[requiredChemical.chemical.name] -= requiredChemicals
 			}
-			fmt.Println("ALL REQUIREMTS SET, state is: ", state)
+			//		fmt.Println("ALL REQUIREMTS SET, state is: ", state)
 		} else {
-			fmt.Println("FUN", len(outputChemical.requiredChemicals))
+			//		fmt.Println("FUN", len(outputChemical.requiredChemicals))
 
 			permutations := permutation(rangeSlice(0, len(outputChemical.requiredChemicals)))
-			fmt.Println("PERMUTATIONS: ", permutations)
+			//		fmt.Println("PERMUTATIONS: ", permutations)
 			var posibleStates []State
 			for i := 0; i < len(permutations); i++ {
 				// Generate a copy of boxOfChemicals and generatedChemicals
 				posibleStates = append(posibleStates, copyState(state))
 			}
-			fmt.Println("Initial Canidates: ", posibleStates)
+			//		fmt.Println("Initial Canidates: ", posibleStates)
 			for premutationIndex, path := range permutations {
 				currentState := posibleStates[premutationIndex]
-				fmt.Println("PERMUTATION NUMBER ", premutationIndex)
-				fmt.Println(path)
-				fmt.Println("to generate ", outputChemical.name)
+				//			fmt.Println("PERMUTATION NUMBER ", premutationIndex)
+				//fmt.Println(path)
+				//			fmt.Println("to generate ", outputChemical.name)
 				for _, index := range path {
 					// Check if we have enough of this chemical
 					requiredChemical := outputChemical.requiredChemicals[index]
-					fmt.Println("Check if we need ", requiredChemical.chemical.name)
-					if currentState.boxOfChemicals[requiredChemical.chemical.name] < requiredChemical.quantity {
-						var chemicalRequiredQuantity int = requiredChemical.quantity - currentState.boxOfChemicals[requiredChemical.chemical.name]
-						fmt.Println("We need more ", requiredChemical.chemical.name, " chemical")
-						fmt.Println("We need", chemicalRequiredQuantity)
-						fmt.Println("current state: ", currentState)
-						currentState = generateChemical(chemicals, requiredChemical.chemical.name, chemicalRequiredQuantity, currentState)
-						fmt.Println("current state after calling generateChemical: ", currentState)
+					//				fmt.Println("Check if we need ", requiredChemical.chemical.name)
+					if currentState.boxOfChemicals[requiredChemical.chemical.name] >= requiredChemical.quantity {
+						//					fmt.Println("We have enugh ", requiredChemical.chemical.name, " chemical")
 						currentState.boxOfChemicals[requiredChemical.chemical.name] -= requiredChemical.quantity
-						if currentState.boxOfChemicals[requiredChemical.chemical.name] < 0 {
-							fmt.Println(currentState)
-							log.Fatal("BOOOM")
-						}
-						fmt.Println("current state after calling generateChemical and substracying required ", requiredChemical.chemical.name, requiredChemical.quantity, currentState)
-
 					} else {
-						fmt.Println("We have enugh ", requiredChemical.chemical.name, " chemical")
+						//					fmt.Println("NEED ", requiredChemical.quantity, " of ", requiredChemical.chemical.name, " but we have ", currentState.boxOfChemicals[requiredChemical.chemical.name])
+						for currentState.boxOfChemicals[requiredChemical.chemical.name] < requiredChemical.quantity {
+							var chemicalRequiredQuantity int = requiredChemical.quantity - currentState.boxOfChemicals[requiredChemical.chemical.name]
+							//						fmt.Println("We need more ", requiredChemical.chemical.name, " chemical")
+							//						fmt.Println("We need", chemicalRequiredQuantity)
+							//						fmt.Println("current state: ", currentState)
+							currentState = generateChemical(chemicals, requiredChemical.chemical.name, chemicalRequiredQuantity, currentState)
+							//currentState.boxOfChemicals[requiredChemical.chemical.name] += requiredChemical.chemical.quantityGenerated
+							//currentState.generatedChemicals[requiredChemical.chemical.name] += requiredChemical.chemical.quantityGenerated
+
+							//						fmt.Println("current state after calling generateChemical: ", currentState)
+							//						fmt.Println("current state after calling generateChemical and substracying required ", requiredChemical.chemical.name, requiredChemical.quantity, currentState)
+						}
+						//					fmt.Println("NEEDED ", requiredChemical.quantity, " of ", requiredChemical.chemical.name, " but we have ", currentState.boxOfChemicals[requiredChemical.chemical.name], "times ")
 						currentState.boxOfChemicals[requiredChemical.chemical.name] -= requiredChemical.quantity
 					}
+					if currentState.boxOfChemicals[requiredChemical.chemical.name] < 0 {
+						fmt.Println(currentState)
+						log.Fatal("BOOOM")
+					}
+
 				}
 
-				fmt.Println("_____________", posibleStates)
+				//			fmt.Println("_____________", posibleStates)
 				posibleStates[premutationIndex] = currentState
-				fmt.Println("current state after CALCULATE CANDIDATE: ", currentState)
-				fmt.Println("_____________", posibleStates)
+				//				fmt.Println("current state after CALCULATE CANDIDATE: ", currentState)
+				//				fmt.Println("_____________", posibleStates)
 
 			}
 			//Choose best path
-			fmt.Println("Choose best path")
-			bestPathValue := 999999999999999999
+			//			fmt.Println("Choose best path")
+			bestPathValue := 999999999999
 			bestPathIndex := -1
-			fmt.Println("Canidates: ", posibleStates)
+			//			fmt.Println("Canidates: ", posibleStates)
 			for premutationIndex, _ := range permutations {
-				fmt.Println(posibleStates[premutationIndex].boxOfChemicals["ORE"], posibleStates[premutationIndex].generatedChemicals["ORE"])
-				if posibleStates[premutationIndex].boxOfChemicals["ORE"] < bestPathValue {
-					fmt.Println(posibleStates[premutationIndex].boxOfChemicals["ORE"], posibleStates[premutationIndex].generatedChemicals["ORE"])
+				//				fmt.Println(posibleStates[premutationIndex].boxOfChemicals["ORE"], posibleStates[premutationIndex].generatedChemicals["ORE"])
+				if posibleStates[premutationIndex].boxOfChemicals["ORE"] < bestPathValue && posibleStates[premutationIndex].boxOfChemicals["ORE"] < state.minimunOreRequired {
+					//fmt.Println(posibleStates[premutationIndex].boxOfChemicals["ORE"], posibleStates[premutationIndex].generatedChemicals["ORE"])
 					bestPathValue = posibleStates[premutationIndex].boxOfChemicals["ORE"]
 					bestPathIndex = premutationIndex
 				}
 			}
-			fmt.Println("best index", bestPathIndex)
+			if bestPathIndex == -1 {
+				bestPathIndex = 0
+				state = posibleStates[bestPathIndex]
+				return state
+			}
+			//			fmt.Println("best index", bestPathIndex)
 			state = posibleStates[bestPathIndex]
 			//fmt.Println("interfinal state before substract: ", state)
 			//			for _, requiredChemical := range outputChemical.requiredChemicals {
@@ -254,11 +273,14 @@ func generateChemical(chemicals map[string]*Chemical, requiredChemicalName strin
 			//				fmt.Println("After substracting ", requiredChemical.chemical.name, " -> ", state.boxOfChemicals[requiredChemical.chemical.name])
 			//			}
 
-			fmt.Println("interfinal state: ", state)
+			//			fmt.Println("interfinal state: ", state)
 		}
 		state.boxOfChemicals[outputChemical.name] += outputChemical.quantityGenerated
-		state.generatedChemicals[outputChemical.name] += outputChemical.quantityGenerated
-		fmt.Println("After adding quantity generated: ", state)
+		//		fmt.Println("After adding quantity generated: ", state)
+	}
+	if state.boxOfChemicals["FUEL"] == 1 {
+		state.minimunOreRequired = state.boxOfChemicals["ORE"]
+		fmt.Println("Found ", state)
 	}
 	return state
 }
@@ -282,7 +304,7 @@ func main() {
 
 	state.boxOfChemicals = boxOfChemicals
 	state.generatedChemicals = generatedChemicals
-	state.minimunOreRequired = 999999999999999999
+	state.minimunOreRequired = 999999999999
 
 	fmt.Println("=====================================================")
 	state = generateChemical(chemicals, "FUEL", 1, state)
