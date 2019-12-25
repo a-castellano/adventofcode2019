@@ -4,7 +4,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/yourbasic/graph"
 	"log"
 	"os"
 	"strconv"
@@ -252,11 +251,23 @@ func runIntCode(intCode []int, input chan int, output chan int) {
 
 		case 99:
 			stop = true
+			fmt.Println("END")
 			output <- 99
 		default:
 			log.Fatal("Unknown opcode ", opcode)
 		}
 	}
+}
+
+func isIntersection(shieldMap [][]rune, rows int, columns int, i int, j int) bool {
+	var intersection bool = false
+
+	if i > 0 && i < (rows-2) && j > 0 && j < (columns-2) {
+		if shieldMap[i][j] == shieldMap[i-1][j] && shieldMap[i-1][j] == shieldMap[i+1][j] && shieldMap[i+1][j] == shieldMap[i][j-1] && shieldMap[i][j-1] == shieldMap[i][j+1] {
+			intersection = true
+		}
+	}
+	return intersection
 }
 
 func getShieldMap(intCode []int) ([][]rune, [][]*Point) {
@@ -292,9 +303,7 @@ func getShieldMap(intCode []int) ([][]rune, [][]*Point) {
 	return shieldMap, shieldPoints
 }
 
-func findPath(shieldMap [][]rune, shieldPoints [][]*Point) int {
-	var result int
-
+func findPath(shieldMap [][]rune, shieldPoints [][]*Point) {
 	var rows int = len(shieldMap)
 	var columns int = len(shieldMap[0])
 
@@ -340,7 +349,7 @@ func findPath(shieldMap [][]rune, shieldPoints [][]*Point) int {
 					}
 				}
 				if i != rows-1 {
-					if shieldPoints[i+1][j].content != '.' {
+					if i != rows-1 {
 						shieldPoints[i][j].down = shieldPoints[i+1][j].ID
 					}
 				}
@@ -360,23 +369,6 @@ func findPath(shieldMap [][]rune, shieldPoints [][]*Point) int {
 		}
 	}
 
-	gm := graph.New(len(points))
-	for _, value := range points {
-		if value.up != -1 {
-			gm.Add(value.ID, points[value.up].ID)
-		}
-		if value.down != -1 {
-			gm.Add(value.ID, points[value.down].ID)
-		}
-		if value.right != -1 {
-			gm.Add(value.ID, points[value.right].ID)
-		}
-		if value.left != -1 {
-			gm.Add(value.ID, points[value.left].ID)
-		}
-
-	}
-
 	direction := 'L'
 	switch startPoint.content {
 	case '^':
@@ -387,74 +379,210 @@ func findPath(shieldMap [][]rune, shieldPoints [][]*Point) int {
 		direction = 'L'
 	case 'v':
 		direction = 'D'
-
 	}
-	dist := make([]int, gm.Order())
-	var counter int = 0
-	graph.BFS(gm, 0, func(v, w int, _ int64) {
-		changeDirection := false
+	visitedPoints := make(map[int]bool)
+	currentPosition := &startPoint
+	visitedPoints[currentPosition.ID] = true
+	var directions []rune
+	for len(visitedPoints)+1 != len(points) {
+		var nextStep int = -1
+		//Try to follow the tile
 		switch direction {
 		case 'U':
-			if points[v].X != points[w].X-1 {
-				changeDirection = true
-				//		fmt.Println("Change direction")
-			}
-		case 'D':
-			if points[v].X != points[w].X+1 {
-				changeDirection = true
-				//		fmt.Println("Change direction")
+			if _, ok := visitedPoints[currentPosition.up]; !ok && currentPosition.up != -1 {
+				nextStep = currentPosition.up
+			} else {
+				if currentPosition.up != -1 {
+					nextStep = currentPosition.up
+				}
 			}
 		case 'R':
-			if points[v].Y != points[w].Y+1 {
-				changeDirection = true
-				//		fmt.Println("Change direction")
+			if _, ok := visitedPoints[currentPosition.right]; !ok && currentPosition.right != -1 {
+				nextStep = currentPosition.right
+			} else {
+				if currentPosition.right != -1 {
+					nextStep = currentPosition.right
+				}
 			}
 		case 'L':
-			if points[v].Y != points[w].Y-1 {
-				changeDirection = true
-				//		fmt.Println("Change direction")
+			if _, ok := visitedPoints[currentPosition.left]; !ok && currentPosition.left != -1 {
+				nextStep = currentPosition.left
+			} else {
+				if currentPosition.left != -1 {
+					nextStep = currentPosition.left
+				}
+			}
+		case 'D':
+			if _, ok := visitedPoints[currentPosition.down]; !ok && currentPosition.down != -1 {
+				nextStep = currentPosition.down
+			} else {
+				if currentPosition.down != -1 {
+					nextStep = currentPosition.down
+				}
 			}
 		}
-
-		if changeDirection {
-			//Determine new direction
-			if points[v].X == points[w].X-1 {
+		if nextStep == -1 {
+			if _, ok := visitedPoints[currentPosition.up]; !ok && currentPosition.up != -1 {
+				nextStep = currentPosition.up
 				direction = 'U'
 			}
-			if points[v].X == points[w].X+1 {
-				direction = 'D'
-			}
-			if points[v].Y == points[w].Y-1 {
-				direction = 'L'
-			}
-			if points[v].Y == points[w].Y+1 {
+			if _, ok := visitedPoints[currentPosition.right]; !ok && currentPosition.right != -1 {
+				nextStep = currentPosition.right
 				direction = 'R'
 			}
-			if counter > 0 {
-				fmt.Printf("%d ", counter)
+			if _, ok := visitedPoints[currentPosition.left]; !ok && currentPosition.left != -1 {
+				nextStep = currentPosition.left
+				direction = 'L'
 			}
-			fmt.Printf("%c ", direction)
-			counter = 0
-		} else {
-			counter++
+			if _, ok := visitedPoints[currentPosition.down]; !ok && currentPosition.down != -1 {
+				nextStep = currentPosition.down
+				direction = 'D'
+			}
 		}
+		visitedPoints[currentPosition.ID] = true
+		shieldMap[currentPosition.X][currentPosition.Y] = '_'
+		currentPosition = points[nextStep]
+		directions = append(directions, direction)
 
-		//fmt.Printf("Current Direction: %c\n", direction)
-		//fmt.Println(points[v].X, points[v].Y, "to", points[w].X, points[w].Y)
-		dist[w] = dist[v] + 1
-	})
+	}
+	fmt.Println("\nInstructions required for visiting every part of the scaffold at least once:")
+	var lastDirection rune = '-'
+	var turn rune = 'L'
+	var stepCounter int = -1
+	for _, direction := range directions {
+		if direction != lastDirection {
+			if stepCounter != -1 {
+				fmt.Printf("%d ", stepCounter+1)
+			}
+			switch lastDirection {
+			case '-':
+				lastDirection = 'R'
+			case 'U':
+				switch direction {
+				case 'U':
+					turn = '?'
+				case 'D':
+					turn = '?'
+				case 'L':
+					turn = 'L'
+				case 'R':
+					turn = 'R'
+				}
+			case 'L':
+				switch direction {
+				case 'U':
+					turn = 'R'
+				case 'D':
+					turn = 'L'
+				case 'L':
+					turn = '?'
+				case 'R':
+					turn = '?'
+				}
+			case 'R':
+				switch direction {
+				case 'U':
+					turn = 'L'
+				case 'D':
+					turn = 'R'
+				case 'L':
+					turn = '?'
+				case 'R':
+					turn = '?'
+				}
+			case 'D':
+				switch direction {
+				case 'U':
+					turn = '?'
+				case 'D':
+					turn = '?'
+				case 'L':
+					turn = 'R'
+				case 'R':
+					turn = 'L'
+				}
+
+			}
+			fmt.Printf("%c ", turn)
+			lastDirection = direction
+			stepCounter = 0
+		} else {
+			stepCounter++
+		}
+	}
+	fmt.Printf("%d ", stepCounter+1)
 	fmt.Printf("\n")
+}
+
+func controlVacuum(intCode []int, A []rune, B []rune, C []rune, main_routine []rune) int {
+	output := make(chan int, 1)
+
+	var vacuumInput []int
+
+	var result int
+	for _, asci := range main_routine {
+		vacuumInput = append(vacuumInput, int(asci))
+	}
+	vacuumInput = append(vacuumInput, 10)
+	for _, asci := range A {
+		vacuumInput = append(vacuumInput, int(asci))
+	}
+	vacuumInput = append(vacuumInput, 10)
+
+	for _, asci := range B {
+		vacuumInput = append(vacuumInput, int(asci))
+	}
+	vacuumInput = append(vacuumInput, 10)
+	for _, asci := range C {
+		vacuumInput = append(vacuumInput, int(asci))
+	}
+	vacuumInput = append(vacuumInput, 10)
+	vacuumInput = append(vacuumInput, int('n'))
+	vacuumInput = append(vacuumInput, 10)
+
+	input := make(chan int, len(vacuumInput))
+	for i := 0; i < len(vacuumInput); i++ {
+		input <- vacuumInput[i]
+	}
+	go runIntCode(intCode, input, output)
+
+	result = -1
+	//	for true {
+	//		result = <-output
+	//		fmt.Println(result)
+	//	}
+	for result < 255 {
+		result = <-output
+	}
+
 	return result
 }
 
 func main() {
+	var A, B, C, main_routine []rune
 	args := os.Args[1:]
 	if len(args) != 1 {
 		log.Fatal("You must supply a file to process.")
 	}
 	filename := args[0]
 	intCode := processFile(filename)
+	intCodeCopy := make([]int, len(intCode))
+	copy(intCodeCopy, intCode)
 	shieldMap, shieldPoints := getShieldMap(intCode)
-	result := findPath(shieldMap, shieldPoints)
+	findPath(shieldMap, shieldPoints)
+
+	A = []rune("L,12,L,12,R,12")
+	B = []rune("L,8,L,8,R,12,L,8,L,8")
+	C = []rune("L,10,R,8,R,12")
+	main_routine = []rune("A,A,B,C,C,A,B,C,A,B")
+
+	fmt.Println("A -> Size: ", len(A), " -> ", A)
+	fmt.Println("B -> Size: ", len(B), " -> ", B)
+	fmt.Println("C -> Size: ", len(C), " -> ", C)
+	fmt.Println("main_routine -> Size: ", len(main_routine), " -> ", main_routine)
+
+	//Force the vacuum robot to wake up by changing the value in your ASCII program at address 0 from 1 to 2.
+	intCodeCopy[0] = 2
+	result := controlVacuum(intCodeCopy, A, B, C, main_routine)
 	fmt.Println("Result: ", result)
 }
