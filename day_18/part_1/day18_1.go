@@ -86,7 +86,7 @@ func generateGraph(vault [][]rune, rows int, columns int) *dijkstra.Graph {
 	graph := dijkstra.NewGraph()
 	for i := 1; i < rows-1; i++ {
 		for j := 1; j < columns-1; j++ {
-			graph.AddVertex(i*1000 + j)
+			graph.AddVertex(i*100 + j)
 		}
 	}
 
@@ -101,25 +101,25 @@ func generateGraph(vault [][]rune, rows int, columns int) *dijkstra.Graph {
 				if vault[i-1][j] <= 'A' && vault[i-1][j] >= 'Z' {
 					formerCost += 100000
 				}
-				graph.AddArc(i*1000+j, (i-1)*1000+j, formerCost)
+				graph.AddArc(i*100+j, (i-1)*100+j, formerCost)
 			}
 			if vault[i+1][j] != '#' {
 				if vault[i+1][j] <= 'A' && vault[i+1][j] >= 'Z' {
 					formerCost += 100000
 				}
-				graph.AddArc(i*1000+j, (i+1)*1000+j, formerCost)
+				graph.AddArc(i*100+j, (i+1)*100+j, formerCost)
 			}
 			if vault[i][j-1] != '#' {
 				if vault[i][j-1] <= 'A' && vault[i][j-1] >= 'Z' {
 					formerCost += 100000
 				}
-				graph.AddArc(i*1000+j, i*1000+j-1, formerCost)
+				graph.AddArc(i*100+j, i*100+j-1, formerCost)
 			}
 			if vault[i][j+1] != '#' {
 				if vault[i][j+1] <= 'A' && vault[i][j+1] >= 'Z' {
 					formerCost += 100000
 				}
-				graph.AddArc(i*1000+j, i*1000+j+1, formerCost)
+				graph.AddArc(i*100+j, i*100+j+1, formerCost)
 			}
 		}
 	}
@@ -129,35 +129,40 @@ func generateGraph(vault [][]rune, rows int, columns int) *dijkstra.Graph {
 
 func getPointFromID(id int) Point {
 	var point Point
-	point.i = id / 1000
-	point.j = id % 1000
+	point.i = id / 100
+	point.j = id % 100
 
 	return point
 }
 
-func walkPath(vault [][]rune, currentKeys map[rune]Point, currentDoors map[rune]Point, path []int, initialPoint Point) (Point, [][]rune) {
+func walkPath(vault [][]rune, currentKeys map[rune]Point, currentDoors map[rune]Point, path []int, initialPoint Point) (Point, [][]rune, bool) {
 	//fmt.Println(path)
+	var errored bool = false
 	vault[initialPoint.i][initialPoint.j] = '.'
 	for _, step := range path {
 		point := getPointFromID(step)
 		//	fmt.Println(point)
 		if vault[point.i][point.j] != '.' {
+
+			if vault[point.i][point.j] >= 'A' && vault[point.i][point.j] <= 'Z' {
+				errored = true
+			}
 			//		fmt.Printf("key found: %c\n", vault[point.i][point.j])
-			delete(currentKeys, vault[point.i][point.j])
+			//			delete(currentKeys, vault[point.i][point.j])
 			//		fmt.Println(currentDoors)
 			//		fmt.Println(vault[point.i][point.j])
 			//		fmt.Println(currentDoors[vault[point.i][point.j]-32])
 			doorPoint := currentDoors[vault[point.i][point.j]-32]
 			vault[doorPoint.i][doorPoint.j] = '.'
-			delete(currentDoors, vault[point.i][point.j]-32)
-			delete(currentKeys, vault[point.i][point.j])
+			//			delete(currentDoors, vault[point.i][point.j]-32)
+			//			delete(currentKeys, vault[point.i][point.j])
 			initialPoint.i = point.i
 			initialPoint.j = point.j
 			vault[point.i][point.j] = '.'
 		}
 	}
 	vault[initialPoint.i][initialPoint.j] = '@'
-	return initialPoint, vault
+	return initialPoint, vault, errored
 }
 
 func printVault(vault [][]rune, rows int, columns int) {
@@ -202,7 +207,7 @@ func generateChoices(vault [][]rune, rows int, columns int, numberOfChoices int,
 	return choices
 }
 
-func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerStepts int, bestChoiceValue int, cache map[string]dijkstra.BestPath) ([][]rune, int, int, Point, int) {
+func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerStepts int, bestChoiceValue int, cache map[string]dijkstra.BestPath) ([][]rune, int, int, Point, int, map[string]dijkstra.BestPath) {
 
 	//fmt.Println(":::::::::::")
 	//printVault(vault, rows, columns)
@@ -217,51 +222,38 @@ func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerSt
 		//fmt.Println(initialPoint)
 		//fmt.Println(currentKeys)
 		//fmt.Println(currentDoors)
-		initialPointID := initialPoint.i*1000 + initialPoint.j
+		initialPointID := initialPoint.i*100 + initialPoint.j
 		//Calculate reachable keys
 		//s1 := rand.NewSource(time.Now().UnixNano())
 		//r1 := rand.New(s1)
 		//randID := r1.Intn(100)
 		for key, point := range currentKeys {
-			pointID := point.i*1000 + point.j
+			pointID := point.i*100 + point.j
 			pathID := fmt.Sprintf("%d-%d", initialPointID, pointID)
-			fmt.Println("PATHID ", pathID)
-			//	best, err := graph.Shortest(initialPointID, pointID)
-			//	if err != nil {
-			//		log.Fatal(err)
-			//	}
-			//	if best.Distance < 10000 {
-			//		fmt.Println(randID, "Shortest distance from ", initialPointID, " to ", string(key), "in Point", pointID, " : ", best.Distance, " following path ", best.Path)
-			//		reachableKeys[key] = best
-			//reachableKeys[key] = cache[pathID]
+			//fmt.Println("PATHID ", pathID)
+
+			//			best, err := graph.Shortest(initialPointID, pointID)
+			//			if err != nil {
+			//				log.Fatal(err)
 			//			}
-			if _, ok := cache[pathID]; ok {
-				reachableKeys[key] = cache[pathID]
-				fmt.Println("Value for ", pathID, " is ", cache[pathID].Distance)
-				fmt.Println("Value for ", pathID, " is ", cache[pathID].Path)
-				//				best, err := graph.Shortest(initialPointID, pointID)
-				//				if err != nil {
-				//					log.Fatal(err)
-				//				}
-				//				if best.Distance < 10000 {
-				//					//	fmt.Println("Shortest distance from initialPoint to ", string(key), " : ", best.Distance, " following path ", best.Path)
-				//					fmt.Println("BUT ", pathID, best.Distance)
-				//					reachableKeys[key] = best
-				//					if best.Distance != cache[pathID].Distance {
-				//						log.Fatal("dddd")
-				//					}
-				//				}
-			} else {
-				//	fmt.Println("Looking for pathID: ", pathID)
+			//			if best.Distance < 10000 {
+			//				//fmt.Println("Shortest distance from ", initialPointID, " to ", string(key), "in Point", pointID, " : ", best.Distance, " following path ", best.Path)
+			//				reachableKeys[key] = best
+			//				cache[pathID] = best
+			//			}
+
+			if _, ok := cache[pathID]; !ok {
 				best, err := graph.Shortest(initialPointID, pointID)
 				if err != nil {
 					log.Fatal(err)
 				}
 				if best.Distance < 10000 {
+					//fmt.Println("Shortest distance from ", initialPointID, " to ", string(key), "in Point", pointID, " : ", best.Distance, " following path ", best.Path)
+					reachableKeys[key] = best
 					cache[pathID] = best
-					reachableKeys[key] = cache[pathID]
 				}
-
+			} else {
+				reachableKeys[key] = cache[pathID]
 			}
 		}
 
@@ -274,30 +266,47 @@ func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerSt
 		//fmt.Println("KEYS:", reachableKeys)
 		if len(reachableKeys) == 1 {
 			//fmt.Println("There is only one key to reach")
-			//fmt.Println(reachableKeys[keys[0]])
-			initialPoint, vault = walkPath(vault, currentKeys, currentDoors, reachableKeys[keys[0]].Path, initialPoint)
-			fmt.Println(formerStepts, "__________", reachableKeys[keys[0]].Distance)
-			formerStepts += int(reachableKeys[keys[0]].Distance)
-			fmt.Println(formerStepts, "__________")
-
-			printVault(vault, rows, columns)
+			//fmt.Println("############## BEFORE WALK PATH", formerStepts)
+			//printVault(vault, rows, columns)
+			var errored bool = false
+			initialPoint, vault, errored = walkPath(vault, currentKeys, currentDoors, reachableKeys[keys[0]].Path, initialPoint)
+			if errored {
+				formerStepts += 100000000000
+			} else {
+				formerStepts += int(reachableKeys[keys[0]].Distance)
+			}
 			currentKeys, currentDoors = getKeysAndDoors(vault, rows, columns)
+			//fmt.Println("############## AFTER WALK PATH ", formerStepts, currentKeys)
+			//printVault(vault, rows, columns)
 		} else {
 			if len(reachableKeys) > 1 {
+				numberOfChoices := len(reachableKeys)
+				if numberOfChoices > 4 && formerStepts != 0 {
+					numberOfChoices = 4
+				}
 				//		fmt.Println("Current steps: ", formerStepts)
 				//		fmt.Println("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
 				//		printVault(vault, rows, columns)
-				choices := generateChoices(vault, rows, columns, len(reachableKeys), currentKeys, currentDoors, initialPoint, formerStepts)
+				choices := generateChoices(vault, rows, columns, numberOfChoices, currentKeys, currentDoors, initialPoint, formerStepts)
 				var goodLookingChoices []int
 				//fmt.Println()
-				for i := 0; i < len(keys); i++ {
-					//	fmt.Println(choices[i])
+				for i := 0; i < numberOfChoices; i++ {
+					var errored bool = false
+					//fmt.Println("CHOICE ", i)
 					//	fmt.Println()
+					//fmt.Println("############## BEFORE WALK PATH", i, choices[i].formerStepts, reachableKeys[keys[i]].Distance)
+					//printVault(choices[i].vault, rows, columns)
+					choices[i].initialPoint, choices[i].vault, errored = walkPath(choices[i].vault, choices[i].currentKeys, choices[i].currentDoors, reachableKeys[keys[i]].Path, choices[i].initialPoint)
+					if errored {
+						choices[i].formerStepts += 100000000000
+					} else {
+						choices[i].formerStepts += int(reachableKeys[keys[i]].Distance)
+					}
+					choices[i].vault, rows, columns, choices[i].initialPoint, choices[i].formerStepts, cache = getKeys(choices[i].vault, rows, columns, choices[i].initialPoint, choices[i].formerStepts, bestChoiceValue, cache)
+					//fmt.Println("############## AFTER WALK PATH", i, choices[i].formerStepts)
+					//printVault(choices[i].vault, rows, columns)
 
-					choices[i].initialPoint, choices[i].vault = walkPath(choices[i].vault, choices[i].currentKeys, choices[i].currentDoors, reachableKeys[keys[i]].Path, choices[i].initialPoint)
-					choices[i].formerStepts += int(reachableKeys[keys[i]].Distance)
-					choices[i].vault, rows, columns, choices[i].initialPoint, choices[i].formerStepts = getKeys(choices[i].vault, rows, columns, choices[i].initialPoint, choices[i].formerStepts, bestChoiceValue, cache)
-					if choices[i].formerStepts <= bestChoiceValue {
+					if choices[i].formerStepts < bestChoiceValue {
 						bestChoiceValue = choices[i].formerStepts
 						goodLookingChoices = append(goodLookingChoices, i)
 					}
@@ -316,7 +325,7 @@ func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerSt
 						bestChoice = goodLookingChoices[i]
 					}
 				}
-				fmt.Println("__________CHECKING CHOICES, there are ", len(keys), " choices. Best one is", bestChoice)
+				//fmt.Println("__________CHECKING CHOICES, there are ", len(keys), " choices. Best one is", bestChoice)
 				if bestChoice != -1 {
 					vault = choices[bestChoice].vault
 					initialPoint = choices[bestChoice].initialPoint
@@ -325,7 +334,6 @@ func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerSt
 					formerStepts = choices[bestChoice].formerStepts
 					//bestChoiceValue = formerStepts
 					currentKeys, currentDoors = getKeysAndDoors(vault, rows, columns)
-					fmt.Println("Choice ", bestChoice, "of ", len(goodLookingChoices), "-  total steps", choices[bestChoice].formerStepts)
 				} else {
 					vault = choices[0].vault
 					initialPoint = choices[0].initialPoint
@@ -352,21 +360,21 @@ func getKeys(vault [][]rune, rows int, columns int, initialPoint Point, formerSt
 		currentKeys, currentDoors = getKeysAndDoors(vault, rows, columns)
 		if len(currentKeys) > 0 {
 
-			if formerStepts <= bestChoiceValue {
-				vault, rows, columns, initialPoint, formerStepts = getKeys(vault, rows, columns, initialPoint, formerStepts, bestChoiceValue, cache)
+			if formerStepts < bestChoiceValue {
+				vault, rows, columns, initialPoint, formerStepts, cache = getKeys(vault, rows, columns, initialPoint, formerStepts, bestChoiceValue, cache)
 			} else {
-				return vault, rows, columns, initialPoint, 10000000000000000
+				return vault, rows, columns, initialPoint, 10000000000000000, cache
 			}
-		} // else {
-		//   fmt.Println("$$$$$$$$$$$$$$$")
-		//   printVault(vault, rows, columns)
-		//   fmt.Println("$$$$$$$$$$$$$$$444")
+		} else {
+			//   fmt.Println("$$$$$$$$$$$$$$$")
+			//   printVault(vault, rows, columns)
+			//   fmt.Println("$$$$$$$$$$$$$$$444")
 
-		//   fmt.Println("Path finished with ", formerStepts, " steps.")
-		//   fmt.Println("Best choice is  ", bestChoiceValue)
-		//}//
+			//	fmt.Println("Path finished with ", formerStepts, " steps.")
+			//fmt.Println("Best choice is  ", bestChoiceValue)
+		}
 	}
-	return vault, rows, columns, initialPoint, formerStepts
+	return vault, rows, columns, initialPoint, formerStepts, cache
 }
 
 func main() {
@@ -381,6 +389,6 @@ func main() {
 	//fmt.Println("Rows: ", rows)
 	//fmt.Println("Columns: ", columns)
 	//fmt.Println("initialPoint: ", initialPoint)
-	_, _, _, _, stepts := getKeys(vault, rows, columns, initialPoint, 0, 1000000, cache)
+	_, _, _, _, stepts, _ := getKeys(vault, rows, columns, initialPoint, 0, 1000000, cache)
 	fmt.Println("Shortest path: ", stepts)
 }
